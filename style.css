@@ -1,0 +1,58 @@
+body {
+  font-family: sans-serif;
+  text-align: center;
+  background: #f4f1ea;
+  color: #333;
+  margin: 0;
+  padding: 16px;
+}
+
+.status {
+  margin-bottom: 16px;
+  font-size: 18px;
+}
+
+button {
+  margin-left: 12px;
+  padding: 6px 14px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* カードを4列に並べる */
+#board {
+  display: grid;
+  grid-template-columns: repeat(4, 70px);
+  gap: 10px;
+  justify-content: center;
+}
+
+.card {
+  width: 70px;
+  height: 90px;
+  background: #3a6ea5;        /* 裏面の色 */
+  border-radius: 8px;
+  font-size: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* めくられたカード */
+.card.open {
+  background: #fff;
+}
+
+/* そろったカード */
+.card.matched {
+  background: #d8f0d0;
+  cursor: default;
+}
+
+#message {
+  font-size: 22px;
+  font-weight: bold;
+  margin-top: 20px;
+}
