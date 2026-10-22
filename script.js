@@ -1,5 +1,5 @@
 // 使う絵柄（8種類 × 2枚 = 16枚）
-const symbols = ["😿", "😸", "😹", "😻", "😼", "😽", "😾", "🙀"];
+const symbols = ["🍎", "🍌", "🍇", "🍓", "🍒", "🍑", "🍍", "🥝"];
 
 // 画面の部品を取得
 const board = document.getElementById("board");
