@@ -56,3 +56,23 @@ button {
   font-weight: bold;
   margin-top: 20px;
 }
+
+/* コンボ演出 */
+.combo-effect {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 48px;
+  font-weight: bold;
+  color: #ff5a1f;
+  text-shadow: 0 0 10px #ffd34d, 0 0 20px #ffb300;
+  pointer-events: none;   /* 演出がカードのクリックを邪魔しない */
+  animation: combo-pop 1s ease-out forwards;
+}
+
+@keyframes combo-pop {
+  0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+  30%  { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+  100% { transform: translate(-50%, -80%) scale(1);   opacity: 0; }
+}
