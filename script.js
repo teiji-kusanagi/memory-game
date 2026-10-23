@@ -13,6 +13,7 @@ let secondCard = null;  // 2枚目にめくったカード
 let lock = false;       // 2枚を見比べている間はクリックを止める
 let moves = 0;          // 手数
 let matchedPairs = 0;   // そろったペアの数
+let combo = 0;          // 連続でそろえた回数
 
 // 配列をシャッフルする（フィッシャー–イェーツ法）
 function shuffle(array) {
@@ -32,6 +33,7 @@ function startGame() {
   lock = false;
   moves = 0;
   matchedPairs = 0;
+  combo = 0;
   movesText.textContent = moves;
 
   // 絵柄を2枚ずつ用意して混ぜる
@@ -74,6 +76,10 @@ function checkMatch() {
     firstCard.classList.add("matched");
     secondCard.classList.add("matched");
     matchedPairs++;
+    combo++;
+    if (combo >= 2) {
+      showCombo(combo);
+    }
     firstCard = null;
     secondCard = null;
 
@@ -82,6 +88,7 @@ function checkMatch() {
     }
   } else {
     // ハズレ：少し見せてから裏返す
+    combo = 0;
     lock = true;
     setTimeout(function () {
       firstCard.classList.remove("open");
@@ -96,6 +103,19 @@ function checkMatch() {
 }
 
 resetButton.addEventListener("click", startGame);
+
+// コンボ演出を表示する
+function showCombo(count) {
+  const effect = document.createElement("div");
+  effect.className = "combo-effect";
+  effect.textContent = count + " COMBO!";
+  document.body.appendChild(effect);
+
+  // アニメーションが終わる頃に消す
+  setTimeout(function () {
+    effect.remove();
+  }, 1000);
+}
 
 // ページを開いたらゲーム開始
 startGame();
