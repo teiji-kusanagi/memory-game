@@ -6,6 +6,8 @@ const board = document.getElementById("board");
 const movesText = document.getElementById("moves");
 const message = document.getElementById("message");
 const resetButton = document.getElementById("reset");
+const bestText = document.getElementById("best");
+const BEST_KEY = "memoryGameBest";   // メモ帳に書くときの名前
 
 // ゲームの状態を覚えておく変数
 let firstCard = null;   // 1枚目にめくったカード
@@ -35,6 +37,7 @@ function startGame() {
   matchedPairs = 0;
   combo = 0;
   movesText.textContent = moves;
+  showBest();
 
   // 絵柄を2枚ずつ用意して混ぜる
   const deck = shuffle([...symbols, ...symbols]);
@@ -84,7 +87,14 @@ function checkMatch() {
     secondCard = null;
 
     if (matchedPairs === symbols.length) {
-      message.textContent = "クリア！ " + moves + "手でした";
+      const best = getBest();
+      if (best === null || moves < best) {
+        saveBest(moves);
+        showBest();
+        message.textContent = "新記録！ " + moves + "手でクリア！";
+      } else {
+        message.textContent = "クリア！ " + moves + "手でした";
+      }
     }
   } else {
     // ハズレ：少し見せてから裏返す
@@ -103,6 +113,31 @@ function checkMatch() {
 }
 
 resetButton.addEventListener("click", startGame);
+
+// メモ帳から最少手数を読む（なければ null）
+function getBest() {
+  try {
+    const value = localStorage.getItem(BEST_KEY);
+    return value === null ? null : Number(value);
+  } catch (e) {
+    return null;
+  }
+}
+
+// メモ帳に最少手数を書く
+function saveBest(value) {
+  try {
+    localStorage.setItem(BEST_KEY, value);
+  } catch (e) {
+    // 保存できない環境でも、ゲームは止めない
+  }
+}
+
+// 画面の「最少」欄を更新する
+function showBest() {
+  const best = getBest();
+  bestText.textContent = best === null ? "-" : best;
+}
 
 // コンボ演出を表示する
 function showCombo(count) {
