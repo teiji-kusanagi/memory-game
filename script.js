@@ -112,8 +112,6 @@ function checkMatch() {
   }
 }
 
-resetButton.addEventListener("click", startGame);
-
 // メモ帳から最少手数を読む（なければ null）
 function getBest() {
   try {
@@ -151,6 +149,8 @@ function showCombo(count) {
     effect.remove();
   }, 1000);
 }
+
+resetButton.addEventListener("click", startGame);
 
 // ページを開いたらゲーム開始
 startGame();
