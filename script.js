@@ -141,7 +141,7 @@ function showBest() {
 function showCombo(count) {
   const effect = document.createElement("div");
   effect.className = "combo-effect";
-  effect.textContent = count + " コンボ!";
+  effect.textContent = count + " 連続!";
   document.body.appendChild(effect);
 
   // アニメーションが終わる頃に消す
