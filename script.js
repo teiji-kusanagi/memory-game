@@ -19,6 +19,7 @@ let matchedPairs = 0;   // そろったペアの数
 let combo = 0;          // 連続でそろえた回数
 let seconds = 0;        // 経過秒数
 let timerId = null;     // 動いているタイマーの番号（止まっているときは null）
+let flipBackId = null;  // 「裏返す」予約の番号（予約がないときは null）
 
 // 配列をシャッフルする（フィッシャー–イェーツ法）
 function shuffle(array) {
@@ -31,6 +32,9 @@ function shuffle(array) {
 
 // ゲームを最初から始める
 function startGame() {
+  // 裏返す予約が残っていたら取り消す
+  clearTimeout(flipBackId);
+  flipBackId = null;
   board.innerHTML = "";
   message.textContent = "";
   message.classList.remove("too-many");
@@ -116,7 +120,7 @@ function checkMatch() {
     // ハズレ：少し見せてから裏返す
     combo = 0;
     lock = true;
-    setTimeout(function () {
+    flipBackId = setTimeout(function () {
       firstCard.classList.remove("open");
       secondCard.classList.remove("open");
       firstCard.textContent = "";
@@ -124,6 +128,7 @@ function checkMatch() {
       firstCard = null;
       secondCard = null;
       lock = false;
+      flipBackId = null;
     }, 800);
   }
 }
