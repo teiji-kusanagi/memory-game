@@ -7,6 +7,7 @@ const movesText = document.getElementById("moves");
 const message = document.getElementById("message");
 const resetButton = document.getElementById("reset");
 const bestText = document.getElementById("best");
+const timeText = document.getElementById("time");
 const BEST_KEY = "memoryGameBest";   // メモ帳に書くときの名前
 
 // ゲームの状態を覚えておく変数
@@ -16,6 +17,8 @@ let lock = false;       // 2枚を見比べている間はクリックを止め�
 let moves = 0;          // 手数
 let matchedPairs = 0;   // そろったペアの数
 let combo = 0;          // 連続でそろえた回数
+let seconds = 0;        // 経過秒数
+let timerId = null;     // 動いているタイマーの番号（止まっているときは null）
 
 // 配列をシャッフルする（フィッシャー–イェーツ法）
 function shuffle(array) {
@@ -38,6 +41,9 @@ function startGame() {
   matchedPairs = 0;
   combo = 0;
   movesText.textContent = moves;
+  stopTimer();
+  seconds = 0;
+  timeText.textContent = seconds;
   showBest();
 
   // 絵柄を2枚ずつ用意して混ぜる
@@ -58,6 +64,11 @@ function flipCard() {
   // 見比べ中・すでに開いている・そろっているカードは無視
   if (lock) return;
   if (this.classList.contains("open")) return;
+
+  // 最初の1枚でタイマーをスタート
+  if (timerId === null) {
+    startTimer();
+  }
 
   this.classList.add("open");
   this.textContent = this.dataset.symbol;
@@ -88,6 +99,7 @@ function checkMatch() {
     secondCard = null;
 
     if (matchedPairs === symbols.length) {
+      stopTimer();
       const best = getBest();
       if (best === null || moves < best) {
         saveBest(moves);
@@ -139,6 +151,20 @@ function saveBest(value) {
 function showBest() {
   const best = getBest();
   bestText.textContent = best === null ? "-" : best;
+}
+
+// タイマーを動かす（1秒ごとに数字を1増やす）
+function startTimer() {
+  timerId = setInterval(function () {
+    seconds++;
+    timeText.textContent = seconds;
+  }, 1000);
+}
+
+// タイマーを止める
+function stopTimer() {
+  clearInterval(timerId);
+  timerId = null;
 }
 
 // コンボ演出を表示する
