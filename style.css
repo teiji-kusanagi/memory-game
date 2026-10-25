@@ -12,6 +12,12 @@ body {
   font-size: 18px;
 }
 
+/* 「手数」「タイム」「最少」をそれぞれ離して並べる */
+.stat {
+  display: inline-block;
+  margin: 0 12px;
+}
+
 button {
   margin-left: 12px;
   padding: 6px 14px;
