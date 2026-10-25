@@ -57,6 +57,11 @@ button {
   margin-top: 20px;
 }
 
+/* 手数が多すぎたときのメッセージ */
+#message.too-many {
+  color: #d62828;
+}
+
 /* コンボ演出 */
 .combo-effect {
   position: fixed;

@@ -30,6 +30,7 @@ function shuffle(array) {
 function startGame() {
   board.innerHTML = "";
   message.textContent = "";
+  message.classList.remove("too-many");
   firstCard = null;
   secondCard = null;
   lock = false;
@@ -94,6 +95,9 @@ function checkMatch() {
         message.textContent = "新記録！ " + moves + "手でクリア！";
       } else {
         message.textContent = "クリア！ " + moves + "手でした";
+      }
+      if (moves > 20) {
+        message.classList.add("too-many");
       }
     }
   } else {
