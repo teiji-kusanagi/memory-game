@@ -21,6 +21,9 @@ let seconds = 0;        // 経過秒数
 let timerId = null;     // 動いているタイマーの番号（止まっているときは null）
 let flipBackId = null;  // 「裏返す」予約の番号（予約がないときは null）
 
+// 音を作るための作業台（最初にクリックしたときに作る。ゲームの状態ではないのでリセットしない）
+let audioContext = null;
+
 // 配列をシャッフルする（フィッシャー–イェーツ法）
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -76,6 +79,7 @@ function flipCard() {
 
   this.classList.add("open");
   this.textContent = this.dataset.symbol;
+  playFlipSound();
 
   if (firstCard === null) {
     firstCard = this;   // 1枚目
@@ -94,6 +98,7 @@ function checkMatch() {
     // そろった！
     firstCard.classList.add("matched");
     secondCard.classList.add("matched");
+    playMatchSound();
     matchedPairs++;
     combo++;
     if (combo >= 2) {
@@ -183,6 +188,47 @@ function showCombo(count) {
   setTimeout(function () {
     effect.remove();
   }, 1000);
+}
+
+// 音を1つ鳴らす
+// frequency：音の高さ（大きいほど高い）、delay：鳴り始めるまでの秒数、duration：鳴らす長さ（秒）
+function playTone(frequency, delay, duration) {
+  try {
+    // 作業台がまだなければ作る
+    if (audioContext === null) {
+      audioContext = new AudioContext();
+    }
+    const startTime = audioContext.currentTime + delay;
+
+    const oscillator = audioContext.createOscillator();  // 発音器
+    const gain = audioContext.createGain();              // 音量のつまみ
+    oscillator.type = "sine";                            // やわらかい音
+    oscillator.frequency.value = frequency;
+
+    // 鳴り始めは少し大きく、そこからすっと小さくする
+    gain.gain.setValueAtTime(0.2, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+    // 発音器 → 音量のつまみ → スピーカー の順につなぐ
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.start(startTime);
+    oscillator.stop(startTime + duration);
+  } catch (e) {
+    // 音が出せない環境でも、ゲームは止めない
+  }
+}
+
+// カードをめくったときの「ピッ」
+function playFlipSound() {
+  playTone(880, 0, 0.1);
+}
+
+// ペアがそろったときの「ピロン♪」（低い音 → 高い音）
+function playMatchSound() {
+  playTone(660, 0.1, 0.15);
+  playTone(990, 0.25, 0.25);
 }
 
 resetButton.addEventListener("click", startGame);
