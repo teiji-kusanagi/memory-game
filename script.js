@@ -22,6 +22,8 @@ let combo = 0;          // 連続でそろえた回数
 let seconds = 0;        // 経過秒数
 let timerId = null;     // 動いているタイマーの番号（止まっているときは null）
 let flipBackId = null;  // 「裏返す」予約の番号（予約がないときは null）
+let introTimerIds = []; // 登場演出の予約の番号をためておく
+let mixSound = null;    // 鳴っている混ぜる音（鳴っていないときは null）
 
 // 音を作るための作業台（最初にクリックしたときに作る。ゲームの状態ではないのでリセットしない）
 let audioContext = null;
@@ -42,6 +44,8 @@ function startGame() {
   // 裏返す予約が残っていたら取り消す
   clearTimeout(flipBackId);
   flipBackId = null;
+  // 登場演出の予約や音が残っていたら片付ける
+  clearIntro();
   board.innerHTML = "";
   message.textContent = "";
   message.classList.remove("too-many");
@@ -68,6 +72,67 @@ function startGame() {
     card.addEventListener("click", flipCard);
     board.appendChild(card);
   });
+
+  // カードを混ぜて並べる演出
+  playIntro();
+}
+
+// 登場演出：中央に集まって混ざる（0.6秒）→ 左上から順に並ぶ（0.05秒おき）
+function playIntro() {
+  lock = true;   // 演出中はクリックさせない
+  const cards = board.querySelectorAll(".card");
+
+  // 盤面の真ん中の位置を測る
+  const boardRect = board.getBoundingClientRect();
+  const centerX = boardRect.left + boardRect.width / 2;
+  const centerY = boardRect.top + boardRect.height / 2;
+
+  // 1枚ずつ「真ん中までの距離」と「揺れ方」を覚えさせて、混ぜる動きを始める
+  cards.forEach(function (card) {
+    const rect = card.getBoundingClientRect();
+    const dx = centerX - (rect.left + rect.width / 2);
+    const dy = centerY - (rect.top + rect.height / 2);
+    card.style.setProperty("--dx", dx + "px");
+    card.style.setProperty("--dy", dy + "px");
+    card.style.setProperty("--rot", (Math.random() * 40 - 20) + "deg");
+    card.style.setProperty("--jx", (Math.random() * 30 - 15) + "px");
+    card.style.setProperty("--jy", (Math.random() * 30 - 15) + "px");
+    card.classList.add("mixing");
+  });
+  playMixSound();
+
+  // 0.6秒後から、左上のカードから順に元の場所へ飛ばす
+  cards.forEach(function (card, index) {
+    const id = setTimeout(function () {
+      card.classList.remove("mixing");
+      card.classList.add("dealing");
+      playDealSound();
+    }, 600 + index * 50);
+    introTimerIds.push(id);
+  });
+
+  // 最後のカードが着地したら（飛ぶのに0.1秒）、クリックできるようにする
+  const endId = setTimeout(function () {
+    lock = false;
+    introTimerIds = [];
+  }, 600 + (cards.length - 1) * 50 + 100);
+  introTimerIds.push(endId);
+}
+
+// 登場演出の予約を全部取り消し、混ぜる音を止める
+function clearIntro() {
+  introTimerIds.forEach(function (id) {
+    clearTimeout(id);
+  });
+  introTimerIds = [];
+  if (mixSound !== null) {
+    try {
+      mixSound.stop();
+    } catch (e) {
+      // すでに止まっていても気にしない
+    }
+    mixSound = null;
+  }
 }
 
 // カードがクリックされたときの処理
@@ -194,16 +259,26 @@ function showCombo(count) {
   }, 1000);
 }
 
+// 音の作業台を用意して返す（音を鳴らせないときは null）
+function getAudioContext() {
+  // 音がオフなら鳴らさない
+  if (!soundOn) return null;
+  // ページを開いてからまだ一度も操作していないときは鳴らさない
+  // （ブラウザの決まりで、操作の前は音を出せないため）
+  if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return null;
+  // 作業台がまだなければ作る
+  if (audioContext === null) {
+    audioContext = new AudioContext();
+  }
+  return audioContext;
+}
+
 // 音を1つ鳴らす
 // frequency：音の高さ（大きいほど高い）、delay：鳴り始めるまでの秒数、duration：鳴らす長さ（秒）
 function playTone(frequency, delay, duration) {
-  // 音がオフなら何もしない
-  if (!soundOn) return;
   try {
-    // 作業台がまだなければ作る
-    if (audioContext === null) {
-      audioContext = new AudioContext();
-    }
+    // 音を鳴らせないときは何もしない
+    if (getAudioContext() === null) return;
     const startTime = audioContext.currentTime + delay;
 
     const oscillator = audioContext.createOscillator();  // 発音器
@@ -235,6 +310,63 @@ function playFlipSound() {
 function playMatchSound() {
   playTone(660, 0.1, 0.15);
   playTone(990, 0.25, 0.25);
+}
+
+// カードを並べるときの1枚ごとの「トッ」
+function playDealSound() {
+  playTone(440, 0, 0.03);
+}
+
+// カードを混ぜるときの「シャカシャカ」（約0.5秒）
+function playMixSound() {
+  try {
+    // 音を鳴らせないときは何もしない
+    if (getAudioContext() === null) return;
+    const duration = 0.5;
+
+    // でたらめな数を並べて、ザーッという雑音を作る
+    const length = Math.floor(audioContext.sampleRate * duration);
+    const buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+
+    // 高い音だけを通して、紙がこすれるような音にする
+    const filter = audioContext.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = 2000;
+
+    // 音量を0.1秒ごとに上げ下げして「シャカシャカ」にする
+    const gain = audioContext.createGain();
+    const startTime = audioContext.currentTime;
+    gain.gain.setValueAtTime(0, startTime);
+    for (let t = 0; t < duration; t += 0.1) {
+      gain.gain.linearRampToValueAtTime(0.15, startTime + t + 0.03);
+      gain.gain.linearRampToValueAtTime(0.02, startTime + t + 0.1);
+    }
+    gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+    // 雑音 → 高い音だけ通す → 音量のつまみ → スピーカー の順につなぐ
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+
+    source.start(startTime);
+    source.stop(startTime + duration);
+
+    // 「最初から」で止められるように覚えておく（鳴り終わったら忘れる）
+    mixSound = source;
+    source.onended = function () {
+      if (mixSound === source) {
+        mixSound = null;
+      }
+    };
+  } catch (e) {
+    // 音が出せない環境でも、ゲームは止めない
+  }
 }
 
 // メモ帳から音の設定を読む（読めないときはオン）

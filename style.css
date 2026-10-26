@@ -68,6 +68,28 @@ button {
   color: #d62828;
 }
 
+/* 登場演出：真ん中に集まって混ざる（--dx, --dy は script.js が測った真ん中までの距離） */
+.card.mixing {
+  animation: card-mix 0.6s ease-in-out forwards;
+}
+
+@keyframes card-mix {
+  0%   { transform: translate(0, 0); }
+  50%  { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); }
+  75%  { transform: translate(calc(var(--dx) + var(--jx)), calc(var(--dy) + var(--jy))) rotate(calc(var(--rot) * -1)); }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(0deg); }
+}
+
+/* 登場演出：真ん中から元の場所へ飛んでいく */
+.card.dealing {
+  animation: card-deal 0.1s ease-out;
+}
+
+@keyframes card-deal {
+  from { transform: translate(var(--dx), var(--dy)); }
+  to   { transform: translate(0, 0); }
+}
+
 /* コンボ演出 */
 .combo-effect {
   position: fixed;
