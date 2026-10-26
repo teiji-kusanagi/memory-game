@@ -8,7 +8,9 @@ const message = document.getElementById("message");
 const resetButton = document.getElementById("reset");
 const bestText = document.getElementById("best");
 const timeText = document.getElementById("time");
+const soundButton = document.getElementById("sound");
 const BEST_KEY = "memoryGameBest";   // メモ帳に書くときの名前
+const SOUND_KEY = "memoryGameSound"; // 音のオン・オフをメモ帳に書くときの名前
 
 // ゲームの状態を覚えておく変数
 let firstCard = null;   // 1枚目にめくったカード
@@ -23,6 +25,8 @@ let flipBackId = null;  // 「裏返す」予約の番号（予約がないと�
 
 // 音を作るための作業台（最初にクリックしたときに作る。ゲームの状態ではないのでリセットしない）
 let audioContext = null;
+// 音を鳴らすかどうか（設定なのでリセットしない。メモ帳に "off" とあればオフで始める）
+let soundOn = loadSoundSetting();
 
 // 配列をシャッフルする（フィッシャー–イェーツ法）
 function shuffle(array) {
@@ -193,6 +197,8 @@ function showCombo(count) {
 // 音を1つ鳴らす
 // frequency：音の高さ（大きいほど高い）、delay：鳴り始めるまでの秒数、duration：鳴らす長さ（秒）
 function playTone(frequency, delay, duration) {
+  // 音がオフなら何もしない
+  if (!soundOn) return;
   try {
     // 作業台がまだなければ作る
     if (audioContext === null) {
@@ -231,7 +237,34 @@ function playMatchSound() {
   playTone(990, 0.25, 0.25);
 }
 
+// メモ帳から音の設定を読む（読めないときはオン）
+function loadSoundSetting() {
+  try {
+    return localStorage.getItem(SOUND_KEY) !== "off";
+  } catch (e) {
+    return true;
+  }
+}
+
+// 音のオン・オフを切り替えて、メモ帳に書く
+function toggleSound() {
+  soundOn = !soundOn;
+  try {
+    localStorage.setItem(SOUND_KEY, soundOn ? "on" : "off");
+  } catch (e) {
+    // 保存できない環境でも、切り替えはできる
+  }
+  showSoundButton();
+}
+
+// ボタンの文字を今の設定に合わせる
+function showSoundButton() {
+  soundButton.textContent = soundOn ? "音：オン" : "音：オフ";
+}
+
 resetButton.addEventListener("click", startGame);
+soundButton.addEventListener("click", toggleSound);
+showSoundButton();
 
 // ページを開いたらゲーム開始
 startGame();
