@@ -11,6 +11,7 @@ const timeText = document.getElementById("time");
 const soundButton = document.getElementById("sound");
 const BEST_KEY = "memoryGameBest";   // メモ帳に書くときの名前
 const SOUND_KEY = "memoryGameSound"; // 音のオン・オフをメモ帳に書くときの名前
+const MAX_PITCH_STEP = 4;            // 連続でそろえたときに音を上げる段数の上限（高くなりすぎないように）
 
 // ゲームの状態を覚えておく変数
 let firstCard = null;   // 1枚目にめくったカード
@@ -167,9 +168,9 @@ function checkMatch() {
     // そろった！
     firstCard.classList.add("matched");
     secondCard.classList.add("matched");
-    playMatchSound();
     matchedPairs++;
     combo++;
+    playMatchSound(combo);
     if (combo >= 2) {
       showCombo(combo);
     }
@@ -307,9 +308,12 @@ function playFlipSound() {
 }
 
 // ペアがそろったときの「ピロン♪」（低い音 → 高い音）
-function playMatchSound() {
-  playTone(660, 0.1, 0.15);
-  playTone(990, 0.25, 0.25);
+// count：連続でそろえた回数。多いほど高い音にする（上限あり）
+function playMatchSound(count) {
+  const step = Math.min(count - 1, MAX_PITCH_STEP);  // 何段上げるか（上限で止める）
+  const rate = Math.pow(2, (step * 2) / 12);          // 1段＝全音ぶん高くする
+  playTone(660 * rate, 0.1, 0.15);
+  playTone(990 * rate, 0.25, 0.25);
 }
 
 // カードを並べるときの1枚ごとの「トッ」
