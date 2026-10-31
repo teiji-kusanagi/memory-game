@@ -9,8 +9,12 @@ const resetButton = document.getElementById("reset");
 const bestText = document.getElementById("best");
 const timeText = document.getElementById("time");
 const soundButton = document.getElementById("sound");
-const BEST_KEY = "memoryGameBest";   // メモ帳に書くときの名前
+const normalTab = document.getElementById("mode-normal");
+const comboTab = document.getElementById("mode-combo");
+const BEST_KEY = "memoryGameBest";   // メモ帳に書くときの名前（通常モードの最少手数）
+const BEST_COMBO_KEY = "memoryGameBestCombo"; // コンボモードの最少手数をメモ帳に書くときの名前
 const SOUND_KEY = "memoryGameSound"; // 音のオン・オフをメモ帳に書くときの名前
+const MODE_KEY = "memoryGameMode";   // 選んだモードをメモ帳に書くときの名前
 const MAX_PITCH_STEP = 4;            // 連続でそろえたときに音を上げる段数の上限（高くなりすぎないように）
 
 // ゲームの状態を覚えておく変数
@@ -30,6 +34,8 @@ let mixSound = null;    // 鳴っている混ぜる音（鳴っていないと�
 let audioContext = null;
 // 音を鳴らすかどうか（設定なのでリセットしない。メモ帳に "off" とあればオフで始める）
 let soundOn = loadSoundSetting();
+// 遊び方のモード（"normal"＝通常、"combo"＝コンボ。設定なのでリセットしない）
+let mode = loadMode();
 
 // 配列をシャッフルする（フィッシャー–イェーツ法）
 function shuffle(array) {
@@ -174,6 +180,13 @@ function checkMatch() {
     if (combo >= 2) {
       showCombo(combo);
     }
+    // コンボモードでは、2連続目から「コンボ数−1」手を引く（手数はマイナスになってもよい）
+    if (mode === "combo" && combo >= 2) {
+      const bonus = combo - 1;
+      moves -= bonus;
+      movesText.textContent = moves;
+      showBonus(bonus);
+    }
     firstCard = null;
     secondCard = null;
 
@@ -208,20 +221,25 @@ function checkMatch() {
   }
 }
 
-// メモ帳から最少手数を読む（なければ null）
+// 今のモードの最少手数をメモ帳に書くときの名前
+function bestKey() {
+  return mode === "combo" ? BEST_COMBO_KEY : BEST_KEY;
+}
+
+// メモ帳から今のモードの最少手数を読む（なければ null）
 function getBest() {
   try {
-    const value = localStorage.getItem(BEST_KEY);
+    const value = localStorage.getItem(bestKey());
     return value === null ? null : Number(value);
   } catch (e) {
     return null;
   }
 }
 
-// メモ帳に最少手数を書く
+// メモ帳に今のモードの最少手数を書く
 function saveBest(value) {
   try {
-    localStorage.setItem(BEST_KEY, value);
+    localStorage.setItem(bestKey(), value);
   } catch (e) {
     // 保存できない環境でも、ゲームは止めない
   }
@@ -252,6 +270,19 @@ function showCombo(count) {
   const effect = document.createElement("div");
   effect.className = "combo-effect";
   effect.textContent = count + " 連続!";
+  document.body.appendChild(effect);
+
+  // アニメーションが終わる頃に消す
+  setTimeout(function () {
+    effect.remove();
+  }, 1000);
+}
+
+// コンボモードで手数を引いたときの演出（「-2手！」など）を表示する
+function showBonus(count) {
+  const effect = document.createElement("div");
+  effect.className = "bonus-effect";
+  effect.textContent = "-" + count + "手！";
   document.body.appendChild(effect);
 
   // アニメーションが終わる頃に消す
@@ -398,9 +429,46 @@ function showSoundButton() {
   soundButton.textContent = soundOn ? "音：オン" : "音：オフ";
 }
 
+// メモ帳からモードを読む（読めないときは通常モード）
+function loadMode() {
+  try {
+    return localStorage.getItem(MODE_KEY) === "combo" ? "combo" : "normal";
+  } catch (e) {
+    return "normal";
+  }
+}
+
+// 押されたタブのモードに変えてメモ帳に書き、新しいゲームを始める
+// （途中の手数が別のモードの記録に混ざらないように、必ず最初からにする）
+function setMode(newMode) {
+  // 選んでいるタブをもう一度押したときは、遊んでいるゲームを消さないように何もしない
+  if (newMode === mode) return;
+  mode = newMode;
+  try {
+    localStorage.setItem(MODE_KEY, mode);
+  } catch (e) {
+    // 保存できない環境でも、切り替えはできる
+  }
+  showModeTabs();
+  startGame();
+}
+
+// 選んでいるモードのタブだけに active を付ける
+function showModeTabs() {
+  normalTab.classList.toggle("active", mode === "normal");
+  comboTab.classList.toggle("active", mode === "combo");
+}
+
 resetButton.addEventListener("click", startGame);
 soundButton.addEventListener("click", toggleSound);
+normalTab.addEventListener("click", function () {
+  setMode("normal");
+});
+comboTab.addEventListener("click", function () {
+  setMode("combo");
+});
 showSoundButton();
+showModeTabs();
 
 // ページを開いたらゲーム開始
 startGame();
