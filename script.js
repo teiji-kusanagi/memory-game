@@ -11,6 +11,17 @@ const timeText = document.getElementById("time");
 const soundButton = document.getElementById("sound");
 const normalTab = document.getElementById("mode-normal");
 const comboTab = document.getElementById("mode-combo");
+const scoreboard = document.getElementById("scoreboard");
+const rankText = document.getElementById("rank-text");
+const nameForm = document.getElementById("name-form");
+const nameInput = document.getElementById("name-input");
+const nameSaveButton = document.getElementById("name-save");
+const rankingBody = document.getElementById("ranking-body");
+const RANKING_KEY = "memoryGameRanking";            // 通常モードのランキングをメモ帳に書くときの名前
+const RANKING_COMBO_KEY = "memoryGameRankingCombo"; // コンボモードのランキングをメモ帳に書くときの名前
+const RANKING_SIZE = 5;              // ランキングに残す件数
+const NAME_MAX = 10;                 // 名前の最大文字数
+const NO_NAME = "名無し";            // 名前が空欄のときに使う名前
 const BEST_KEY = "memoryGameBest";   // メモ帳に書くときの名前（通常モードの最少手数）
 const BEST_COMBO_KEY = "memoryGameBestCombo"; // コンボモードの最少手数をメモ帳に書くときの名前
 const SOUND_KEY = "memoryGameSound"; // 音のオン・オフをメモ帳に書くときの名前
@@ -29,6 +40,8 @@ let timerId = null;     // 動いているタイマーの番号（止まって�
 let flipBackId = null;  // 「裏返す」予約の番号（予約がないときは null）
 let introTimerIds = []; // 登場演出の予約の番号をためておく
 let mixSound = null;    // 鳴っている混ぜる音（鳴っていないときは null）
+let currentRanking = []; // 今回クリアしたときのランキング（上位5件）
+let currentEntry = null; // ランキングに入った今回の記録（入っていないときは null）
 
 // 音を作るための作業台（最初にクリックしたときに作る。ゲームの状態ではないのでリセットしない）
 let audioContext = null;
@@ -67,6 +80,11 @@ function startGame() {
   seconds = 0;
   timeText.textContent = seconds;
   showBest();
+  // スコアボードを隠して、今回の記録を忘れる
+  currentRanking = [];
+  currentEntry = null;
+  scoreboard.hidden = true;
+  nameInput.value = "";
 
   // 絵柄を2枚ずつ用意して混ぜる
   const deck = shuffle([...symbols, ...symbols]);
@@ -203,6 +221,9 @@ function checkMatch() {
       if (moves > 20) {
         message.classList.add("too-many");
       }
+      // ランキングに入れて、スコアボードを出す
+      const rank = addToRanking(moves, seconds);
+      showScoreboard(rank);
     }
   } else {
     // ハズレ：少し見せてから裏返す
@@ -249,6 +270,106 @@ function saveBest(value) {
 function showBest() {
   const best = getBest();
   bestText.textContent = best === null ? "-" : best;
+}
+
+// 今のモードのランキングをメモ帳に書くときの名前
+function rankingKey() {
+  return mode === "combo" ? RANKING_COMBO_KEY : RANKING_KEY;
+}
+
+// メモ帳から今のモードのランキングを読む（読めない・壊れているときは空の一覧）
+function loadRanking() {
+  try {
+    const list = JSON.parse(localStorage.getItem(rankingKey()));
+    if (!Array.isArray(list)) return [];
+    // 形のおかしい記録は捨てる
+    return list.filter(function (entry) {
+      return entry !== null &&
+        typeof entry.name === "string" &&
+        typeof entry.moves === "number" &&
+        typeof entry.seconds === "number";
+    });
+  } catch (e) {
+    return [];
+  }
+}
+
+// メモ帳に今のモードのランキングを書く
+function saveRanking(list) {
+  try {
+    localStorage.setItem(rankingKey(), JSON.stringify(list));
+  } catch (e) {
+    // 保存できない環境でも、ゲームは止めない
+  }
+}
+
+// 今回の結果をランキングに入れて保存し、何位かを返す（ランク外なら null）
+function addToRanking(movesCount, time) {
+  const entry = { name: NO_NAME, moves: movesCount, seconds: time };
+  const list = loadRanking();
+  list.push(entry);
+  // 手数が少ない順。同じならタイムが短い順。
+  // どちらも同じときは並べ替えで順番が変わらないので、前からある記録が上になる
+  list.sort(function (a, b) {
+    if (a.moves !== b.moves) return a.moves - b.moves;
+    return a.seconds - b.seconds;
+  });
+  currentRanking = list.slice(0, RANKING_SIZE);
+  saveRanking(currentRanking);
+
+  const index = currentRanking.indexOf(entry);
+  if (index === -1) {
+    currentEntry = null;
+    return null;
+  }
+  currentEntry = entry;
+  return index + 1;
+}
+
+// スコアボードを表示する
+function showScoreboard(rank) {
+  if (rank === null) {
+    rankText.textContent = "今回はランク外でした";
+  } else {
+    rankText.textContent = "今回は " + rank + "位！";
+  }
+  // ランキングに入ったときだけ名前を入れられるようにする
+  nameForm.hidden = rank === null;
+  showRankingTable();
+  scoreboard.hidden = false;
+}
+
+// ランキングの表を作る
+function showRankingTable() {
+  rankingBody.innerHTML = "";
+  currentRanking.forEach(function (entry, index) {
+    const row = document.createElement("tr");
+    if (entry === currentEntry) {
+      row.className = "current";   // 今回の記録を目立たせる
+    }
+    // 名前は textContent で入れるので、HTML として読まれない
+    [(index + 1) + "位", entry.name, entry.moves + "手", entry.seconds + "秒"].forEach(function (text) {
+      const cell = document.createElement("td");
+      cell.textContent = text;
+      row.appendChild(cell);
+    });
+    rankingBody.appendChild(row);
+  });
+}
+
+// 入力された名前で今回の記録を書き換えて保存する
+function saveName() {
+  if (currentEntry === null) return;
+  // 前後の空白を取り、10文字までにする（絵文字も1文字と数える）
+  let name = Array.from(nameInput.value.trim()).slice(0, NAME_MAX).join("");
+  if (name === "") {
+    name = NO_NAME;
+  }
+  currentEntry.name = name;
+  saveRanking(currentRanking);
+  // 二重に登録しないように、入力欄を隠す
+  nameForm.hidden = true;
+  showRankingTable();
 }
 
 // タイマーを動かす（1秒ごとに数字を1増やす）
@@ -466,6 +587,13 @@ normalTab.addEventListener("click", function () {
 });
 comboTab.addEventListener("click", function () {
   setMode("combo");
+});
+nameSaveButton.addEventListener("click", saveName);
+nameInput.addEventListener("keydown", function (event) {
+  // 日本語の変換を確定する Enter では登録しない
+  if (event.key === "Enter" && !event.isComposing) {
+    saveName();
+  }
 });
 showSoundButton();
 showModeTabs();
