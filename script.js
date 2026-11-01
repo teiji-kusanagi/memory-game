@@ -1,5 +1,19 @@
-// 使う絵柄（8種類 × 2枚 = 16枚）
-const symbols = ["🍎", "🍌", "🍇", "🍓", "🍒", "🍑", "🍍", "🥝"];
+// カードの絵柄のテーマ（どれも8種類 × 2枚 = 16枚）
+// image が true のテーマは、items に画像ファイルの場所を書く
+const themes = {
+  fruit: {
+    label: "フルーツ",
+    items: ["🍎", "🍌", "🍇", "🍓", "🍒", "🍑", "🍍", "🥝"]
+  },
+  shape: {
+    label: "図形",
+    image: true,
+    items: [
+      "images/shape1.svg", "images/shape2.svg", "images/shape3.svg", "images/shape4.svg",
+      "images/shape5.svg", "images/shape6.svg", "images/shape7.svg", "images/shape8.svg"
+    ]
+  }
+};
 
 // 画面の部品を取得
 const board = document.getElementById("board");
@@ -11,6 +25,8 @@ const timeText = document.getElementById("time");
 const soundButton = document.getElementById("sound");
 const normalTab = document.getElementById("mode-normal");
 const comboTab = document.getElementById("mode-combo");
+const fruitThemeButton = document.getElementById("theme-fruit");
+const shapeThemeButton = document.getElementById("theme-shape");
 const scoreboard = document.getElementById("scoreboard");
 const rankText = document.getElementById("rank-text");
 const nameForm = document.getElementById("name-form");
@@ -26,6 +42,7 @@ const BEST_KEY = "memoryGameBest";   // メモ帳に書くときの名前（通�
 const BEST_COMBO_KEY = "memoryGameBestCombo"; // コンボモードの最少手数をメモ帳に書くときの名前
 const SOUND_KEY = "memoryGameSound"; // 音のオン・オフをメモ帳に書くときの名前
 const MODE_KEY = "memoryGameMode";   // 選んだモードをメモ帳に書くときの名前
+const THEME_KEY = "memoryGameTheme"; // 選んだテーマをメモ帳に書くときの名前
 const MAX_PITCH_STEP = 4;            // 連続でそろえたときに音を上げる段数の上限（高くなりすぎないように）
 
 // ゲームの状態を覚えておく変数
@@ -49,6 +66,9 @@ let audioContext = null;
 let soundOn = loadSoundSetting();
 // 遊び方のモード（"normal"＝通常、"combo"＝コンボ。設定なのでリセットしない）
 let mode = loadMode();
+// カードの絵柄のテーマ（"fruit"＝フルーツ、"shape"＝図形。設定なのでリセットしない）
+// 記録はテーマに関係なく共通なので、最少手数やランキングの保存にはテーマを使わない
+let theme = loadTheme();
 
 // 配列をシャッフルする（フィッシャー–イェーツ法）
 function shuffle(array) {
@@ -87,6 +107,7 @@ function startGame() {
   nameInput.value = "";
 
   // 絵柄を2枚ずつ用意して混ぜる
+  const symbols = themes[theme].items;
   const deck = shuffle([...symbols, ...symbols]);
 
   // カードを1枚ずつ作って盤面に置く
@@ -172,7 +193,7 @@ function flipCard() {
   }
 
   this.classList.add("open");
-  this.textContent = this.dataset.symbol;
+  showFace(this);
   playFlipSound();
 
   if (firstCard === null) {
@@ -184,6 +205,19 @@ function flipCard() {
   moves++;
   movesText.textContent = moves;
   checkMatch();
+}
+
+// カードの表の絵柄を見せる（絵文字なら文字を、画像なら <img> を入れる）
+function showFace(card) {
+  if (themes[theme].image) {
+    const img = document.createElement("img");
+    img.src = card.dataset.symbol;
+    img.alt = themes[theme].label;
+    img.draggable = false;   // 画像をつかんで動かせないようにする
+    card.appendChild(img);
+  } else {
+    card.textContent = card.dataset.symbol;
+  }
 }
 
 // 2枚がそろっているか調べる
@@ -208,7 +242,7 @@ function checkMatch() {
     firstCard = null;
     secondCard = null;
 
-    if (matchedPairs === symbols.length) {
+    if (matchedPairs === themes[theme].items.length) {
       stopTimer();
       const best = getBest();
       if (best === null || moves < best) {
@@ -232,6 +266,7 @@ function checkMatch() {
     flipBackId = setTimeout(function () {
       firstCard.classList.remove("open");
       secondCard.classList.remove("open");
+      // 中身を空にする（絵文字も画像も消える）
       firstCard.textContent = "";
       secondCard.textContent = "";
       firstCard = null;
@@ -580,6 +615,46 @@ function showModeTabs() {
   comboTab.classList.toggle("active", mode === "combo");
 }
 
+// メモ帳からテーマを読む（読めない・知らないテーマのときはフルーツ）
+function loadTheme() {
+  try {
+    const value = localStorage.getItem(THEME_KEY);
+    return value === "shape" ? "shape" : "fruit";
+  } catch (e) {
+    return "fruit";
+  }
+}
+
+// 押されたボタンのテーマに変えてメモ帳に書き、新しいゲームを始める
+function setTheme(newTheme) {
+  // 選んでいるテーマをもう一度押したときは、遊んでいるゲームを消さないように何もしない
+  if (newTheme === theme) return;
+  theme = newTheme;
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch (e) {
+    // 保存できない環境でも、切り替えはできる
+  }
+  showThemeTabs();
+  preloadImages();
+  startGame();
+}
+
+// 選んでいるテーマのボタンだけに active を付ける
+function showThemeTabs() {
+  fruitThemeButton.classList.toggle("active", theme === "fruit");
+  shapeThemeButton.classList.toggle("active", theme === "shape");
+}
+
+// 画像のテーマなら、めくったときにすぐ出るように画像を先に読み込んでおく
+function preloadImages() {
+  if (!themes[theme].image) return;
+  themes[theme].items.forEach(function (src) {
+    const img = new Image();
+    img.src = src;
+  });
+}
+
 resetButton.addEventListener("click", startGame);
 soundButton.addEventListener("click", toggleSound);
 normalTab.addEventListener("click", function () {
@@ -587,6 +662,12 @@ normalTab.addEventListener("click", function () {
 });
 comboTab.addEventListener("click", function () {
   setMode("combo");
+});
+fruitThemeButton.addEventListener("click", function () {
+  setTheme("fruit");
+});
+shapeThemeButton.addEventListener("click", function () {
+  setTheme("shape");
 });
 nameSaveButton.addEventListener("click", saveName);
 nameInput.addEventListener("keydown", function (event) {
@@ -597,6 +678,8 @@ nameInput.addEventListener("keydown", function (event) {
 });
 showSoundButton();
 showModeTabs();
+showThemeTabs();
+preloadImages();
 
 // ページを開いたらゲーム開始
 startGame();

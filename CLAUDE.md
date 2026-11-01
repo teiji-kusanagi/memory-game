@@ -17,6 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - カードをめくると `flipCard()` が、2枚目をめくると `checkMatch()` が動く。ハズレのときは 0.8 秒後に裏返す処理を予約する。「最初から」を押したら、`clearTimeout`（予約した処理を取り消す命令）でこの予約を取り消す。以前の不具合を直したときに入れた処理なので、消さないこと。
 - カードが表か、そろったかは、CSS のクラス（見た目を切り替える目印）`open` と `matched` で表している。
 - 最少手数は `localStorage`（ブラウザにデータを保存しておく場所）に保存している。
+- カードの絵柄は `script.js` の `themes`（テーマの一覧）にある。絵文字のテーマと、`images/` の画像を使うテーマがある。記録はテーマに関係なく共通なので、記録の保存にテーマを混ぜないこと。
 
 ## 書き方のルール
 

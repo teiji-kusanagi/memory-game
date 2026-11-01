@@ -63,6 +63,40 @@ button {
   color: #fff;
 }
 
+/* テーマを選ぶボタン（モードのタブと同じ形で、色は緑） */
+.theme-tabs {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.theme-label {
+  font-size: 16px;
+}
+
+.theme {
+  margin-left: 0;                  /* ボタン共通の左の余白を消して、くっつける */
+  padding: 6px 16px;
+  background: #fff;
+  color: #2a9d5c;
+  border: 2px solid #2a9d5c;
+}
+
+/* 左のボタンは左の角、右のボタンは右の角だけ丸くする */
+.theme:first-of-type {
+  border-radius: 8px 0 0 8px;
+}
+
+.theme:last-of-type {
+  border-radius: 0 8px 8px 0;
+}
+
+.theme.active {
+  background: #2a9d5c;
+  color: #fff;
+}
+
 /* カードを4列に並べる */
 #board {
   display: grid;
@@ -82,6 +116,13 @@ button {
   justify-content: center;
   cursor: pointer;
   user-select: none;
+}
+
+/* カードに入れる画像（図形テーマ） */
+.card img {
+  width: 48px;
+  height: 48px;
+  pointer-events: none;   /* 画像ではなくカードがクリックを受け取るようにする */
 }
 
 /* めくられたカード */
